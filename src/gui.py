@@ -2,7 +2,20 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import ImageTk
 
-from src.image_utils import load_preview_image, is_supported_image, get_filename
+from src.image_utils import (
+    load_preview_image,
+    is_supported_image,
+    get_filename,
+    load_cv_image,
+    create_preview_from_cv,
+    get_scale_factor,
+)
+
+from src.classical import (
+    upscale_bicubic,
+    upscale_lanczos,
+    apply_mild_sharpening,
+)
 
 
 class SuperResolutionApp:
@@ -19,15 +32,14 @@ class SuperResolutionApp:
         self.selected_image_path = None
         self.original_photo = None
         self.output_photo = None
+        self.output_image = None
 
         self._build_layout()
 
     def _build_layout(self):
-        # Main container
         main_frame = ttk.Frame(self.root, padding=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Title
         title_label = ttk.Label(
             main_frame,
             text="Image Super-Resolution Comparison App",
@@ -35,11 +47,9 @@ class SuperResolutionApp:
         )
         title_label.pack(pady=(0, 15))
 
-        # Controls section
         controls_frame = ttk.LabelFrame(main_frame, text="Controls", padding=10)
         controls_frame.pack(fill=tk.X, pady=(0, 15))
 
-        # Method selector
         method_label = ttk.Label(controls_frame, text="Method:")
         method_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
 
@@ -52,7 +62,6 @@ class SuperResolutionApp:
         )
         method_combo.grid(row=0, column=1, padx=5, pady=5)
 
-        # Scale selector
         scale_label = ttk.Label(controls_frame, text="Scale:")
         scale_label.grid(row=0, column=2, padx=5, pady=5, sticky=tk.W)
 
@@ -65,7 +74,6 @@ class SuperResolutionApp:
         )
         scale_combo.grid(row=0, column=3, padx=5, pady=5)
 
-        # Buttons
         select_button = ttk.Button(
             controls_frame,
             text="Select Image",
@@ -89,11 +97,9 @@ class SuperResolutionApp:
 
         controls_frame.columnconfigure(7, weight=1)
 
-        # Image preview section
         preview_frame = ttk.Frame(main_frame)
         preview_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Original image panel
         original_frame = ttk.LabelFrame(preview_frame, text="Original Image", padding=10)
         original_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
 
@@ -104,7 +110,6 @@ class SuperResolutionApp:
         )
         self.original_label.pack(fill=tk.BOTH, expand=True)
 
-        # Output image panel
         output_frame = ttk.LabelFrame(preview_frame, text="Output Image", padding=10)
         output_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(8, 0))
 
@@ -115,7 +120,6 @@ class SuperResolutionApp:
         )
         self.output_label.pack(fill=tk.BOTH, expand=True)
 
-        # Status bar
         status_bar = ttk.Label(
             self.root,
             textvariable=self.status_text,
@@ -161,9 +165,11 @@ class SuperResolutionApp:
                 image="",
                 text="No output yet"
             )
-            self.output_photo = None
 
             self.selected_image_path = file_path
+            self.output_photo = None
+            self.output_image = None
+
             self.status_text.set(f"Selected image: {get_filename(file_path)}")
 
         except Exception as error:
@@ -183,10 +189,48 @@ class SuperResolutionApp:
             return
 
         method = self.selected_method.get()
-        scale = self.selected_scale.get()
-        self.status_text.set(
-            f"Processing feature not added yet. Selected: {method}, Scale: {scale}"
-        )
+        scale_factor = get_scale_factor(self.selected_scale.get())
+
+        if method == "EDSR":
+            messagebox.showinfo(
+                "EDSR Not Added Yet",
+                "EDSR deep learning support will be added in a later step."
+            )
+            self.status_text.set("EDSR support not added yet.")
+            return
+
+        try:
+            image = load_cv_image(self.selected_image_path)
+
+            if method == "Bicubic":
+                processed_image = upscale_bicubic(image, scale_factor)
+            elif method == "Lanczos":
+                processed_image = upscale_lanczos(image, scale_factor)
+            else:
+                raise ValueError("Invalid method selected.")
+
+            processed_image = apply_mild_sharpening(processed_image)
+
+            self.output_image = processed_image
+
+            preview_image = create_preview_from_cv(processed_image)
+            self.output_photo = ImageTk.PhotoImage(preview_image)
+
+            self.output_label.configure(
+                image=self.output_photo,
+                text=""
+            )
+
+            self.status_text.set(
+                f"Processed using {method} interpolation at {scale_factor}x scale."
+            )
+
+        except Exception as error:
+            messagebox.showerror(
+                "Processing Error",
+                f"Could not process image.\n\nError: {error}"
+            )
+            self.status_text.set("Image processing failed.")
 
     def save_output(self):
         self.status_text.set("Save output feature will be added later.")
