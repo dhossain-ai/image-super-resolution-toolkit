@@ -37,6 +37,22 @@ def upscale_lanczos(image, scale_factor=4):
     return upscaled
 
 
+def apply_mild_denoising(image):
+    """
+    Apply mild denoising to reduce noise while preserving details.
+    """
+    denoised = cv2.fastNlMeansDenoisingColored(
+        image,
+        None,
+        h=3,
+        hColor=3,
+        templateWindowSize=7,
+        searchWindowSize=21
+    )
+
+    return denoised
+
+
 def apply_mild_sharpening(image):
     """
     Apply mild sharpening to improve edge clarity.
@@ -52,3 +68,39 @@ def apply_mild_sharpening(image):
     )
 
     return sharpened
+
+
+def apply_contrast_enhancement(image):
+    """
+    Apply mild contrast and brightness enhancement.
+    """
+    enhanced = cv2.convertScaleAbs(
+        image,
+        alpha=1.08,
+        beta=3
+    )
+
+    return enhanced
+
+
+def apply_post_processing(
+    image,
+    use_denoising=True,
+    use_sharpening=True,
+    use_contrast=True
+):
+    """
+    Apply selected post-processing steps.
+    """
+    processed = image.copy()
+
+    if use_denoising:
+        processed = apply_mild_denoising(processed)
+
+    if use_sharpening:
+        processed = apply_mild_sharpening(processed)
+
+    if use_contrast:
+        processed = apply_contrast_enhancement(processed)
+
+    return processed

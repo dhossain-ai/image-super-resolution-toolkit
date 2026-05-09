@@ -17,7 +17,7 @@ from src.image_utils import (
 from src.classical import (
     upscale_bicubic,
     upscale_lanczos,
-    apply_mild_sharpening,
+    apply_post_processing,
 )
 
 from src.deep_learning import upscale_edsr
@@ -27,12 +27,16 @@ class SuperResolutionApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Super-Resolution Comparison App")
-        self.root.geometry("1000x650")
-        self.root.minsize(900, 550)
+        self.root.geometry("1050x700")
+        self.root.minsize(950, 600)
 
         self.selected_method = tk.StringVar(value="Lanczos")
         self.selected_scale = tk.StringVar(value="4x")
         self.status_text = tk.StringVar(value="Ready")
+
+        self.use_denoising = tk.BooleanVar(value=True)
+        self.use_sharpening = tk.BooleanVar(value=True)
+        self.use_contrast = tk.BooleanVar(value=True)
 
         self.selected_image_path = None
         self.original_photo = None
@@ -99,6 +103,30 @@ class SuperResolutionApp:
             command=self.save_output
         )
         save_button.grid(row=0, column=6, padx=5, pady=5)
+
+        post_label = ttk.Label(controls_frame, text="Post-processing:")
+        post_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+
+        denoise_check = ttk.Checkbutton(
+            controls_frame,
+            text="Denoising",
+            variable=self.use_denoising
+        )
+        denoise_check.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+
+        sharpen_check = ttk.Checkbutton(
+            controls_frame,
+            text="Sharpening",
+            variable=self.use_sharpening
+        )
+        sharpen_check.grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
+
+        contrast_check = ttk.Checkbutton(
+            controls_frame,
+            text="Contrast",
+            variable=self.use_contrast
+        )
+        contrast_check.grid(row=1, column=3, padx=5, pady=5, sticky=tk.W)
 
         controls_frame.columnconfigure(7, weight=1)
 
@@ -201,11 +229,9 @@ class SuperResolutionApp:
 
             if method == "Bicubic":
                 processed_image = upscale_bicubic(image, scale_factor)
-                processed_image = apply_mild_sharpening(processed_image)
 
             elif method == "Lanczos":
                 processed_image = upscale_lanczos(image, scale_factor)
-                processed_image = apply_mild_sharpening(processed_image)
 
             elif method == "EDSR":
                 if scale_factor != 4:
@@ -220,10 +246,16 @@ class SuperResolutionApp:
                 self.root.update_idletasks()
 
                 processed_image = upscale_edsr(image, scale_factor)
-                processed_image = apply_mild_sharpening(processed_image)
 
             else:
                 raise ValueError("Invalid method selected.")
+
+            processed_image = apply_post_processing(
+                processed_image,
+                use_denoising=self.use_denoising.get(),
+                use_sharpening=self.use_sharpening.get(),
+                use_contrast=self.use_contrast.get()
+            )
 
             self.output_image = processed_image
 
