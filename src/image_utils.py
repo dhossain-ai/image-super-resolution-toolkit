@@ -1,4 +1,6 @@
 from pathlib import Path
+from datetime import datetime
+
 import cv2
 from PIL import Image
 
@@ -73,3 +75,37 @@ def get_scale_factor(scale_text):
     Convert scale text such as '2x' or '4x' into integer scale factor.
     """
     return int(scale_text.replace("x", ""))
+
+
+def create_output_path(input_path, method, scale_text, output_dir="output"):
+    """
+    Create an output file path using input filename, method, and scale.
+    """
+    output_folder = Path(output_dir)
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    input_file = Path(input_path)
+    file_stem = input_file.stem
+
+    method_name = method.lower().replace(" ", "_")
+    scale_name = scale_text.lower()
+
+    output_path = output_folder / f"{file_stem}_{method_name}_{scale_name}.png"
+
+    if output_path.exists():
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = output_folder / f"{file_stem}_{method_name}_{scale_name}_{timestamp}.png"
+
+    return output_path
+
+
+def save_cv_image(image, output_path):
+    """
+    Save an OpenCV image to disk.
+    """
+    success = cv2.imwrite(str(output_path), image)
+
+    if not success:
+        raise ValueError("Failed to save output image.")
+
+    return output_path

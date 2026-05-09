@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+
 from PIL import ImageTk
 
 from src.image_utils import (
@@ -9,6 +10,8 @@ from src.image_utils import (
     load_cv_image,
     create_preview_from_cv,
     get_scale_factor,
+    create_output_path,
+    save_cv_image,
 )
 
 from src.classical import (
@@ -233,7 +236,39 @@ class SuperResolutionApp:
             self.status_text.set("Image processing failed.")
 
     def save_output(self):
-        self.status_text.set("Save output feature will be added later.")
+        if self.output_image is None:
+            messagebox.showwarning(
+                "No Output Image",
+                "Please process an image before saving."
+            )
+            self.status_text.set("No output image to save.")
+            return
+
+        try:
+            method = self.selected_method.get()
+            scale_text = self.selected_scale.get()
+
+            output_path = create_output_path(
+                input_path=self.selected_image_path,
+                method=method,
+                scale_text=scale_text
+            )
+
+            save_cv_image(self.output_image, output_path)
+
+            messagebox.showinfo(
+                "Image Saved",
+                f"Output image saved successfully:\n\n{output_path}"
+            )
+
+            self.status_text.set(f"Saved output: {output_path}")
+
+        except Exception as error:
+            messagebox.showerror(
+                "Save Error",
+                f"Could not save output image.\n\nError: {error}"
+            )
+            self.status_text.set("Failed to save output image.")
 
     def run(self):
         self.root.mainloop()
