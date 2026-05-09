@@ -1,5 +1,8 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
+from PIL import ImageTk
+
+from src.image_utils import load_preview_image, is_supported_image, get_filename
 
 
 class SuperResolutionApp:
@@ -12,6 +15,10 @@ class SuperResolutionApp:
         self.selected_method = tk.StringVar(value="Lanczos")
         self.selected_scale = tk.StringVar(value="4x")
         self.status_text = tk.StringVar(value="Ready")
+
+        self.selected_image_path = None
+        self.original_photo = None
+        self.output_photo = None
 
         self._build_layout()
 
@@ -119,12 +126,67 @@ class SuperResolutionApp:
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def select_image(self):
-        self.status_text.set("Select image feature will be added in the next step.")
+        file_path = filedialog.askopenfilename(
+            title="Select Image",
+            filetypes=[
+                ("Image Files", "*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp"),
+                ("JPEG Files", "*.jpg *.jpeg"),
+                ("PNG Files", "*.png"),
+                ("All Files", "*.*"),
+            ]
+        )
+
+        if not file_path:
+            self.status_text.set("Image selection cancelled.")
+            return
+
+        if not is_supported_image(file_path):
+            messagebox.showerror(
+                "Unsupported File",
+                "Please select a valid image file."
+            )
+            self.status_text.set("Unsupported image file selected.")
+            return
+
+        try:
+            preview_image = load_preview_image(file_path)
+            self.original_photo = ImageTk.PhotoImage(preview_image)
+
+            self.original_label.configure(
+                image=self.original_photo,
+                text=""
+            )
+
+            self.output_label.configure(
+                image="",
+                text="No output yet"
+            )
+            self.output_photo = None
+
+            self.selected_image_path = file_path
+            self.status_text.set(f"Selected image: {get_filename(file_path)}")
+
+        except Exception as error:
+            messagebox.showerror(
+                "Image Load Error",
+                f"Could not load image.\n\nError: {error}"
+            )
+            self.status_text.set("Failed to load selected image.")
 
     def process_image(self):
+        if not self.selected_image_path:
+            messagebox.showwarning(
+                "No Image Selected",
+                "Please select an image first."
+            )
+            self.status_text.set("No image selected.")
+            return
+
         method = self.selected_method.get()
         scale = self.selected_scale.get()
-        self.status_text.set(f"Process image feature not added yet. Selected: {method}, Scale: {scale}")
+        self.status_text.set(
+            f"Processing feature not added yet. Selected: {method}, Scale: {scale}"
+        )
 
     def save_output(self):
         self.status_text.set("Save output feature will be added later.")
