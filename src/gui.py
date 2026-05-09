@@ -20,6 +20,8 @@ from src.classical import (
     apply_mild_sharpening,
 )
 
+from src.deep_learning import upscale_edsr
+
 
 class SuperResolutionApp:
     def __init__(self):
@@ -194,25 +196,34 @@ class SuperResolutionApp:
         method = self.selected_method.get()
         scale_factor = get_scale_factor(self.selected_scale.get())
 
-        if method == "EDSR":
-            messagebox.showinfo(
-                "EDSR Not Added Yet",
-                "EDSR deep learning support will be added in a later step."
-            )
-            self.status_text.set("EDSR support not added yet.")
-            return
-
         try:
             image = load_cv_image(self.selected_image_path)
 
             if method == "Bicubic":
                 processed_image = upscale_bicubic(image, scale_factor)
+                processed_image = apply_mild_sharpening(processed_image)
+
             elif method == "Lanczos":
                 processed_image = upscale_lanczos(image, scale_factor)
+                processed_image = apply_mild_sharpening(processed_image)
+
+            elif method == "EDSR":
+                if scale_factor != 4:
+                    messagebox.showwarning(
+                        "Unsupported EDSR Scale",
+                        "EDSR currently supports only 4x scale in this app. Please select 4x."
+                    )
+                    self.status_text.set("EDSR requires 4x scale.")
+                    return
+
+                self.status_text.set("Processing with EDSR. Please wait...")
+                self.root.update_idletasks()
+
+                processed_image = upscale_edsr(image, scale_factor)
+                processed_image = apply_mild_sharpening(processed_image)
+
             else:
                 raise ValueError("Invalid method selected.")
-
-            processed_image = apply_mild_sharpening(processed_image)
 
             self.output_image = processed_image
 
@@ -225,7 +236,7 @@ class SuperResolutionApp:
             )
 
             self.status_text.set(
-                f"Processed using {method} interpolation at {scale_factor}x scale."
+                f"Processed using {method} at {scale_factor}x scale."
             )
 
         except Exception as error:
